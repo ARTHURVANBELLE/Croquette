@@ -20,10 +20,10 @@ const int   daylightOffset_sec = 3600;
 // Note: Pins 34 and 35 are input-only and don't support RTC pullups
 // Using RTC-GPIO compatible pins instead
 #define BUT_H 26
-#define BUT_M 27
-#define BUT_V 32
-#define BUT_A 33
-#define BUT_P 25
+#define BUT_M 25
+#define BUT_V 33
+#define BUT_A 32
+#define BUT_P 27
 
 #define uS_TO_S_FACTOR 1000000ULL  // Conversion factor for micro seconds to seconds
 
@@ -52,9 +52,18 @@ Adafruit_SSD1306 oled = Adafruit_SSD1306(128, 64);
 DHT dht(DHTPIN, DHTTYPE);
 
 void setLocalTime(){
+  configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
   struct tm timeinfo;
-  if(!getLocalTime(&timeinfo)){
-    return;
+  
+  for(int attempt = 1; attempt <= 5; attempt++) {
+    
+    if(getLocalTime(&timeinfo)) {
+      break;
+    }
+        
+    if(attempt < 5) { // Don't delay after the last attempt
+      delay(2000);
+    }
   }
 
   hour = timeinfo.tm_hour;
@@ -62,13 +71,8 @@ void setLocalTime(){
   second = timeinfo.tm_sec;
 
   time_until_wakeup = (24 - hour - 1) * 3600 + (60 - minute - 1) * 60 + (60 - second);
-
-  Serial.println();
 }
-
-void requestLocalTime(){
-  configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
-}
+  
 
 void setPinModes()
 {
@@ -338,7 +342,7 @@ void setup() {
 
   if(WiFi.status() == WL_CONNECTED) {
     oledWifiConnect();
-    requestLocalTime();
+    
     setLocalTime();
 
     WiFi.disconnect(true); // Disconnect to save power
